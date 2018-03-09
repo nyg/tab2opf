@@ -81,13 +81,13 @@ def parseargs():
         sys.exit(1)
 
     parser = argparse.ArgumentParser("tab2opf")
-    parser.add_argument("-v", "--verbose", help="make verbose", 
+    parser.add_argument("-v", "--verbose", help="make verbose",
                         action="store_true")
-    parser.add_argument("-m", "--module", 
+    parser.add_argument("-m", "--module",
                         help="Import module for mapping, getkey, getdef")
     parser.add_argument("-s", "--source", default="en", help="Source language")
     parser.add_argument("-t", "--target", default="en", help="Target language")
-    parser.add_argument("file", help="tab file to input")    
+    parser.add_argument("file", help="tab file to input")
     return parser.parse_args()
 
 def loadmember(mod, attr, dfault):
@@ -126,11 +126,11 @@ def readkey(r, defs):
 
     term = term.strip()
     defn = getdef(defn)
-    defn = defn.replace("\\\\","\\").\
-        replace(">", "\\>").\
-        replace("<", "\\<").\
-        replace("\\n","<br/>\n").\
-        strip()
+    #defn = defn.replace("\\\\","\\").\
+    #    replace(">", "\\>").\
+    #    replace("<", "\\<").\
+    #    replace("\\n","<br/>\n").\
+    #    strip()
 
     nkey = normalizeUnicode(term)
     key = getkey(nkey)
@@ -220,16 +220,13 @@ def writekey(to, key, defn):
     for term, g in groupby(terms, key=lambda d: d[0]):
         to.write(
 """
-      <idx:entry name="word" scriptable="yes">
-        <h2>
-          <idx:orth value="{key}">{term}</idx:orth>
-        </h2>
-""".format(term=term, key=key))
+    <idx:entry name="word" scriptable="yes">
+      <idx:orth value="{key}"><strong>{term}</strong></idx:orth>
+      """.format(term=term, key=key))
 
         to.write('; '.join(ndefn for _, ndefn, _ in g))
         to.write(
-"""
-      </idx:entry>
+"""    </idx:entry>
 """
 )
 
@@ -273,7 +270,7 @@ def openopf(ndicts, name):
 		<dc:Identifier id="uid">{name}</dc:Identifier>
 		<!-- Title of the document -->
 		<dc:Title><h2>{name}</h2></dc:Title>
-		<dc:Language>EN</dc:Language>
+		<dc:Language>{source}</dc:Language>
 	</dc-metadata>
 	<x-metadata>
 	        <output encoding="utf-8" flatten-dynamic-dir="yes"/>
