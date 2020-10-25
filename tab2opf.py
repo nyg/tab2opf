@@ -25,6 +25,7 @@ import importlib
 import os
 from contextlib import contextmanager
 from itertools import islice, count, groupby
+import uuid
 
 # Define command-line arguments.
 parser = argparse.ArgumentParser("tab2opf")
@@ -149,9 +150,10 @@ def readkeys():
 # but appears to be necessary to actually
 # have a lookup dictionary
 @contextmanager
-def writekeyfile(name, i):
-    fname = "{}{}.html".format(name, i)
-    if VERBOSE: print("Key file: {}".format(fname))
+def writekeyfile(i):
+    fname = 'dictionary-{}-{}-{}.html'.format(SRC_LANG, TRG_LANG, i).lower()
+    if VERBOSE:
+        print("Key file: {}".format(fname))
     with open(fname, 'w', encoding="utf-8") as to:
         to.write("""<html xmlns:mbp="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf"
       xmlns:idx="https://kindlegen.s3.amazonaws.com/AmazonKindlePublishingGuidelines.pdf">
@@ -209,7 +211,8 @@ def writekey(to, key, defn):
 """
         )
 
-    if VERBOSE: print(key)
+    if VERBOSE:
+        print(key)
 
 
 # Write all the keys, where defns is a map of
@@ -219,14 +222,14 @@ def writekey(to, key, defn):
 # 10,000 keys written to each file (why?? I dunno)
 #
 # Returns the number of files.
-def writekeys(defns, name):
+def writekeys(defns):
     keyit = iter(sorted(defns))
     for j in count():
         keys = list(islice(keyit, 10000))
         if len(keys) == 0:
             break
         else:
-            with writekeyfile(name, j) as to:
+            with writekeyfile(j) as to:
                 for key in keys:
                     writekey(to, key, defns[key])
     return j
@@ -236,7 +239,7 @@ def writekeys(defns, name):
 # is constructed.
 # openopf wraps the contents of writeopf
 @contextmanager
-def openopf(ndicts, name):
+def openopf():
     fname = 'dictionary-{}-{}.opf'.format(SRC_LANG, TRG_LANG).lower()
     if VERBOSE: print("Opf: {}".format(fname))
     with open(fname, 'w') as to:
@@ -245,7 +248,7 @@ def openopf(ndicts, name):
 <package version="2.0" xmlns="http://www.idpf.org/2007/opf" unique-identifier="uid">
 
 <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
-    <dc:identifier id="uid">{name}</dc:identifier>
+    <dc:identifier id="uid">{uuid}</dc:identifier>
     <dc:title>{title}</dc:title>
     <dc:language>{source}</dc:language>
     <x-metadata>
@@ -254,7 +257,7 @@ def openopf(ndicts, name):
     </x-metadata>
 </metadata>
 
-<manifest>""".format(name=name, source=SRC_LANG, target=TRG_LANG, title=DICT_TITLE))
+<manifest>""".format(uuid=uuid.uuid4(), source=SRC_LANG, target=TRG_LANG, title=DICT_TITLE))
 
         yield to
 
@@ -269,11 +272,10 @@ def openopf(ndicts, name):
 
 # Write the opf that describes all the key files
 def writeopf(ndicts, name):
-    with openopf(ndicts, name) as to:
+    with openopf() as to:
         for i in range(ndicts):
-            to.write(
-                """
-    <item id="dictionary{ndict}" href="{name}{ndict}.html" media-type="application/xhtml+xml"/>""".format(ndict=i, name=name))
+            to.write("""
+    <item id="dictionary{ndict}" href="dictionary-{src}-{trg}-{ndict}.html" media-type="application/xhtml+xml"/>""".format(ndict=i, src=SRC_LANG, trg=TRG_LANG))
 
         to.write("""
 </manifest>
@@ -297,7 +299,7 @@ defns = readkeys()
 name = os.path.splitext(os.path.basename(TAB_FILE))[0]
 
 print("Writing keys…")
-ndicts = writekeys(defns, name)
+ndicts = writekeys(defns)
 
 print("Writing opf…")
 writeopf(ndicts, name)
